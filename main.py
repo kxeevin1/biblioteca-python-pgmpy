@@ -1,83 +1,174 @@
 """
 main.py
 -------
-Punto de entrada principal del proyecto Factor Graph.
+Factor Graph sencillo para decidir si llevar paraguas.
 
-Ejecuta de forma secuencial:
-  1. Construcción del Factor Graph manual.
-  2. Inferencia con Belief Propagation.
-  3. Aprendizaje de estructura desde datos sintéticos.
-  4. Visualización del grafo manual y comparación con el aprendido.
+Variables:
+  - Nublado  : 0 = No está nublado,  1 = Está nublado
+  - Lluvia   : 0 = No llueve,         1 = Llueve
+  - Paraguas : 0 = No llevar,         1 = Llevar paraguas
+
+Estructura:
+  Nublado ── Lluvia ── Paraguas
 
 Uso:
-    python main.py
+  python main.py
 """
 
-import os
-from model import construir_factor_graph
-from inference import crear_motor_inferencia, ejecutar_inferencias_demo
-from learning import ejecutar_aprendizaje_demo
-from visualization import dibujar_factor_graph, dibujar_comparacion
+import numpy as np
+from pgmpy.models import FactorGraph
+from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.inference import BeliefPropagation
 
 
-def main():
-    print("=" * 60)
-    print("   PROYECTO: FACTOR GRAPH CON PGMPY")
-    print("=" * 60)
+# =============================================================
+# PASO 1: Definir los factores de probabilidad
+# =============================================================
+# Cada factor representa la relación entre dos variables.
+# Los valores son "compatibilidades": cuanto más alto, más probable.
 
-    # ----------------------------------------------------------
-    # PASO 1: Construir el Factor Graph manualmente
-    # ----------------------------------------------------------
-    print("\nPASO 1: Construcción del Factor Graph")
-    fg_manual = construir_factor_graph()
+# Factor entre Nublado y Lluvia:
+# Si está nublado (1), es más probable que llueva (1)
+factor_nublado_lluvia = DiscreteFactor(
+    variables=["Nublado", "Lluvia"],
+    cardinality=[2, 2],
+    values=[
+        0.9,  # Nublado=0, Lluvia=0  → sin nubes, sin lluvia: MUY compatible
+        0.2,  # Nublado=0, Lluvia=1  → sin nubes pero llueve: poco probable
+        0.3,  # Nublado=1, Lluvia=0  → nublado pero no llueve: puede pasar
+        0.8,  # Nublado=1, Lluvia=1  → nublado y llueve: MUY compatible
+    ]
+)
 
-    # ----------------------------------------------------------
-    # PASO 2: Inferencia mediante Belief Propagation
-    # ----------------------------------------------------------
-    print("\nPASO 2: Inferencia")
-    bp = crear_motor_inferencia(fg_manual)
-    ejecutar_inferencias_demo(bp)
-
-    # ----------------------------------------------------------
-    # PASO 3: Aprender estructura desde datos sintéticos
-    # ----------------------------------------------------------
-    print("\nPASO 3: Aprendizaje de estructura desde datos")
-    fg_aprendido = ejecutar_aprendizaje_demo()
-
-    # ----------------------------------------------------------
-    # PASO 4: Visualización
-    # ----------------------------------------------------------
-    print("\nPASO 4: Visualización")
-
-    # Crear carpeta de salida si no existe
-    os.makedirs("output", exist_ok=True)
-
-    # Dibujar el Factor Graph manual
-    dibujar_factor_graph(
-        fg_manual,
-        titulo="Factor Graph Manual",
-        guardar_en="output/factor_graph_manual.png"
-    )
-
-    # Dibujar el Factor Graph aprendido
-    dibujar_factor_graph(
-        fg_aprendido,
-        titulo="Factor Graph Aprendido desde Datos",
-        guardar_en="output/factor_graph_aprendido.png"
-    )
-
-    # Comparación lado a lado
-    dibujar_comparacion(
-        fg_manual,
-        fg_aprendido,
-        guardar_en="output/comparacion.png"
-    )
-
-    print("\n" + "=" * 60)
-    print("EJECUCIÓN COMPLETADA")
-    print("Imágenes guardadas en: ./output/")
-    print("=" * 60)
+# Factor entre Lluvia y Paraguas:
+# Si llueve (1), es muy recomendable llevar paraguas (1)
+factor_lluvia_paraguas = DiscreteFactor(
+    variables=["Lluvia", "Paraguas"],
+    cardinality=[2, 2],
+    values=[
+        0.9,  # Lluvia=0, Paraguas=0 → no llueve, no llevo: MUY compatible
+        0.1,  # Lluvia=0, Paraguas=1 → no llueve pero llevo: innecesario
+        0.1,  # Lluvia=1, Paraguas=0 → llueve y no llevo: mala idea
+        0.9,  # Lluvia=1, Paraguas=1 → llueve y llevo: MUY compatible
+    ]
+)
 
 
-if __name__ == "__main__":
-    main()
+# =============================================================
+# PASO 2: Construir el Factor Graph
+# =============================================================
+
+fg = FactorGraph()
+
+# Agregar aristas: conectan cada variable con su factor
+# (en pgmpy los nodos factor son los objetos DiscreteFactor)
+fg.add_edge("Nublado",  factor_nublado_lluvia)
+fg.add_edge("Lluvia",   factor_nublado_lluvia)
+fg.add_edge("Lluvia",   factor_lluvia_paraguas)
+fg.add_edge("Paraguas", factor_lluvia_paraguas)
+
+# Registrar los factores en el modelo
+fg.add_factors(factor_nublado_lluvia, factor_lluvia_paraguas)
+
+# Verificar que el grafo está bien construido
+assert fg.check_model(), "El Factor Graph tiene algún error."
+
+print("=" * 55)
+print("   SISTEMA: ¿Debo llevar paraguas hoy?")
+print("=" * 55)
+print()
+print("Modelo construido correctamente.")
+print("Variables: Nublado, Lluvia, Paraguas")
+print("Estructura: Nublado ── Lluvia ── Paraguas")
+print()
+
+
+# =============================================================
+# PASO 3: Inferencia con Belief Propagation
+# =============================================================
+# Belief Propagation "propaga mensajes" entre los nodos
+# para calcular probabilidades sin conocer el estado de todos.
+
+bp = BeliefPropagation(fg)
+bp.calibrate()
+
+
+def mostrar_probabilidad(resultado, variable):
+    """Imprime la probabilidad de forma legible."""
+    valores = resultado.values
+    print(f"  {variable}=No : {valores[0]*100:.1f}%")
+    print(f"  {variable}=Sí : {valores[1]*100:.1f}%")
+    print()
+
+
+# --------------------------------------------------
+# CONSULTA 1: Sin saber nada, ¿qué probabilidades hay?
+# --------------------------------------------------
+print("-" * 55)
+print("CONSULTA 1: Sin información (probabilidades base)")
+print("-" * 55)
+
+p_nublado  = bp.query(["Nublado"])
+p_lluvia   = bp.query(["Lluvia"])
+p_paraguas = bp.query(["Paraguas"])
+
+print("¿Está nublado?")
+mostrar_probabilidad(p_nublado, "Nublado")
+
+print("¿Llueve?")
+mostrar_probabilidad(p_lluvia, "Lluvia")
+
+print("¿Llevar paraguas?")
+mostrar_probabilidad(p_paraguas, "Paraguas")
+
+
+# --------------------------------------------------
+# CONSULTA 2: Sabemos que ESTÁ NUBLADO → ¿llueve? ¿paraguas?
+# --------------------------------------------------
+print("-" * 55)
+print("CONSULTA 2: Sabemos que HOY ESTÁ NUBLADO")
+print("-" * 55)
+
+p_lluvia_dado_nublado    = bp.query(["Lluvia"],   evidence={"Nublado": 1})
+p_paraguas_dado_nublado  = bp.query(["Paraguas"], evidence={"Nublado": 1})
+
+print("¿Llueve si está nublado?")
+mostrar_probabilidad(p_lluvia_dado_nublado, "Lluvia")
+
+print("¿Llevar paraguas si está nublado?")
+mostrar_probabilidad(p_paraguas_dado_nublado, "Paraguas")
+
+
+# --------------------------------------------------
+# CONSULTA 3: Sabemos que NO ESTÁ NUBLADO
+# --------------------------------------------------
+print("-" * 55)
+print("CONSULTA 3: Sabemos que HOY NO ESTÁ NUBLADO")
+print("-" * 55)
+
+p_lluvia_sin_nubes    = bp.query(["Lluvia"],   evidence={"Nublado": 0})
+p_paraguas_sin_nubes  = bp.query(["Paraguas"], evidence={"Nublado": 0})
+
+print("¿Llueve si no hay nubes?")
+mostrar_probabilidad(p_lluvia_sin_nubes, "Lluvia")
+
+print("¿Llevar paraguas si no hay nubes?")
+mostrar_probabilidad(p_paraguas_sin_nubes, "Paraguas")
+
+
+# --------------------------------------------------
+# CONSULTA 4: Sabemos que ESTÁ LLOVIENDO → ¿paraguas?
+# --------------------------------------------------
+print("-" * 55)
+print("CONSULTA 4: Sabemos que ESTÁ LLOVIENDO")
+print("-" * 55)
+
+p_paraguas_dado_lluvia = bp.query(["Paraguas"], evidence={"Lluvia": 1})
+
+print("¿Llevar paraguas si está lloviendo?")
+mostrar_probabilidad(p_paraguas_dado_lluvia, "Paraguas")
+
+
+print("=" * 55)
+print("Fin del programa.")
+print("=" * 55)
