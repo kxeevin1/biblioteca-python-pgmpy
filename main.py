@@ -21,9 +21,7 @@ from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference import BeliefPropagation
 
 
-# =============================================================
-# PASO 1: Definir los factores de probabilidad
-# =============================================================
+# Paso 1: Definir los factores de probabilidad
 # Cada factor representa la relación entre dos variables.
 # Los valores son "compatibilidades": cuanto más alto, más probable.
 
@@ -61,7 +59,6 @@ factor_lluvia_paraguas = DiscreteFactor(
 fg = FactorGraph()
 
 # Agregar aristas: conectan cada variable con su factor
-# (en pgmpy los nodos factor son los objetos DiscreteFactor)
 fg.add_edge("Nublado",  factor_nublado_lluvia)
 fg.add_edge("Lluvia",   factor_nublado_lluvia)
 fg.add_edge("Lluvia",   factor_lluvia_paraguas)
@@ -83,9 +80,7 @@ print("Estructura: Nublado ── Lluvia ── Paraguas")
 print()
 
 
-# =============================================================
-# PASO 3: Inferencia con Belief Propagation
-# =============================================================
+# Paso 3: Inferencia con Belief Propagation
 # Belief Propagation "propaga mensajes" entre los nodos
 # para calcular probabilidades sin conocer el estado de todos.
 
@@ -101,9 +96,7 @@ def mostrar_probabilidad(resultado, variable):
     print()
 
 
-# --------------------------------------------------
 # CONSULTA 1: Sin saber nada, ¿qué probabilidades hay?
-# --------------------------------------------------
 print("-" * 55)
 print("CONSULTA 1: Sin información (probabilidades base)")
 print("-" * 55)
@@ -122,9 +115,7 @@ print("¿Llevar paraguas?")
 mostrar_probabilidad(p_paraguas, "Paraguas")
 
 
-# --------------------------------------------------
-# CONSULTA 2: Sabemos que ESTÁ NUBLADO → ¿llueve? ¿paraguas?
-# --------------------------------------------------
+# CONSULTA 2: Sabemos que ESTÁ NUBLADO -> ¿llueve? ¿paraguas?
 print("-" * 55)
 print("CONSULTA 2: Sabemos que HOY ESTÁ NUBLADO")
 print("-" * 55)
@@ -139,9 +130,7 @@ print("¿Llevar paraguas si está nublado?")
 mostrar_probabilidad(p_paraguas_dado_nublado, "Paraguas")
 
 
-# --------------------------------------------------
 # CONSULTA 3: Sabemos que NO ESTÁ NUBLADO
-# --------------------------------------------------
 print("-" * 55)
 print("CONSULTA 3: Sabemos que HOY NO ESTÁ NUBLADO")
 print("-" * 55)
@@ -156,9 +145,7 @@ print("¿Llevar paraguas si no hay nubes?")
 mostrar_probabilidad(p_paraguas_sin_nubes, "Paraguas")
 
 
-# --------------------------------------------------
-# CONSULTA 4: Sabemos que ESTÁ LLOVIENDO → ¿paraguas?
-# --------------------------------------------------
+# CONSULTA 4: Sabemos que ESTÁ LLOVIENDO -> ¿paraguas?
 print("-" * 55)
 print("CONSULTA 4: Sabemos que ESTÁ LLOVIENDO")
 print("-" * 55)
@@ -167,8 +154,3 @@ p_paraguas_dado_lluvia = bp.query(["Paraguas"], evidence={"Lluvia": 1})
 
 print("¿Llevar paraguas si está lloviendo?")
 mostrar_probabilidad(p_paraguas_dado_lluvia, "Paraguas")
-
-
-print("=" * 55)
-print("Fin del programa.")
-print("=" * 55)
