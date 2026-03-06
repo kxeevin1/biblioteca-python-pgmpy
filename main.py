@@ -51,11 +51,7 @@ factor_lluvia_paraguas = DiscreteFactor(
     ]
 )
 
-
-# =============================================================
 # PASO 2: Construir el Factor Graph
-# =============================================================
-
 fg = FactorGraph()
 
 # Agregar aristas: conectan cada variable con su factor
