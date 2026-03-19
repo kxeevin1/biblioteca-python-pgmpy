@@ -150,3 +150,33 @@ p_paraguas_dado_lluvia = bp.query(["Paraguas"], evidence={"Lluvia": 1})
 
 print("¿Llevar paraguas si está lloviendo?")
 mostrar_probabilidad(p_paraguas_dado_lluvia, "Paraguas")
+
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Convertir el modelo a un grafo de networkx
+G = nx.Graph()
+
+# Agregar nodos de variables
+variables = ["Nublado", "Lluvia", "Paraguas"]
+G.add_nodes_from(variables, color='lightblue')
+
+# Agregar nodos de factores
+factores = ["f(N,L)", "f(L,P)"]
+G.add_nodes_from(factores, color='lightgreen')
+
+# Conectar variables con factores
+G.add_edge("Nublado", "f(N,L)")
+G.add_edge("Lluvia", "f(N,L)")
+G.add_edge("Lluvia", "f(L,P)")
+G.add_edge("Paraguas", "f(L,P)")
+
+# Colores
+colors = ['lightblue' if node in variables else 'lightgreen' for node in G.nodes()]
+
+# Dibujar
+pos = nx.spring_layout(G)
+nx.draw(G, pos, with_labels=True, node_color=colors, node_size=2000, font_size=10)
+
+plt.title("Factor Graph: Nublado - Lluvia - Paraguas")
+plt.show()
